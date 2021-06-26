@@ -9,7 +9,7 @@ class ContatoApplication : Application() {
         private set
 
     companion object {
-        lateinit var instance: ContatoApplication
+         lateinit var instance: ContatoApplication
     }
 
     override fun onCreate() {

@@ -1,5 +1,6 @@
 package com.everis.listadecontatos.helpers
 
+import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
@@ -39,11 +40,23 @@ class HelperDB(
         }
     }
 
-    fun buscarContatos(busca: String) : List<ContatosVO> {
+    fun buscarContatos(busca: String, isBuscaPorId: Boolean = false) : List<ContatosVO> {
         val db = readableDatabase   ?: return emptyList()
         var lista = mutableListOf<ContatosVO>()
-        val sql = "SELECT * FROM $TABLE_NAME"
-        var cursor = db.rawQuery(sql, arrayOf()) ?: return emptyList()
+        var sql: String? = null
+        var args: String? = null
+        if (isBuscaPorId){
+             sql = "SELECT * FROM $TABLE_NAME WHERE $COLUMNS_ID = ?"
+             args = "$busca"
+        }else{
+             sql = "SELECT * FROM $TABLE_NAME WHERE $COLUMNS_NOME LIKE ?"
+             args = "%$busca%"
+        }
+        var cursor = db.rawQuery(sql, arrayOf(args)) ?: return emptyList()
+        if (cursor == null) {
+            db.close()
+            return emptyList()
+        }
         while (cursor.moveToNext()) {
             var contato = ContatosVO(
                 cursor.getInt(cursor.getColumnIndex(COLUMNS_ID)),
@@ -52,7 +65,31 @@ class HelperDB(
             )
             lista.add(contato)
         }
+        db.close()
         return lista
     }
 
+    fun salvarContato(contato: ContatosVO){
+        val db = writableDatabase ?: return
+        val sql = "INSERT INTO $TABLE_NAME ($COLUMNS_NOME,$COLUMNS_TELEFONE) VALUES (?,?)"
+        var array = arrayOf(contato.nome, contato.telefone)
+        db.execSQL(sql, array)
+        db.close()
+    }
+
+    fun deletarContato(id: Int){
+        val db = writableDatabase ?: return
+        val where = "id = ?"
+        val args = arrayOf("$id")
+        db.delete(TABLE_NAME,where,args)
+        db.close()
+    }
+
+    fun updateContato(contato: ContatosVO){
+        val db = writableDatabase ?: return
+        val sql = "UPDATE $TABLE_NAME SET $COLUMNS_NOME = ?, $COLUMNS_TELEFONE = ? WHERE $COLUMNS_ID = ?"
+        val args = arrayOf(contato.nome, contato.telefone, contato.id)
+        db.execSQL(sql,args)
+        db.close()
+    }
 }
